@@ -1,0 +1,120 @@
+
+AWSTemplateFormatVersion: 2010-09-09
+Description: Building a three tier network
+Parameters:
+  LatestAmiId:
+    Type: 'AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>'
+    Default: '/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2'
+  # EC2RoleForSSMArn:
+  #   Type: String
+  #   Default: 'arn:aws:iam::aws:policy/service-role/AmazonEC2RoleforSSM'
+  CWAgentServerPolicyArn:
+    Type: String
+    Default: 'arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy'
+  SSMManagedInstanceCoreArn:
+    Type: String
+    Default: arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+  mySecurityGroup:
+    Type: String
+    Default: sg-09809e225a146acec
+    
+Resources:
+  MySsmRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Description: Role that allows SSM capability
+      ManagedPolicyArns:
+        # - !Ref EC2RoleForSSMArn
+        - !Ref CWAgentServerPolicyArn
+        - !Ref SSMManagedInstanceCoreArn
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+                - ssm.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Path: /
+      Tags:
+        - Key: Name
+          Value: mySsmRole
+
+  MyEc2InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: "/"
+      Roles:
+      - !Ref MySsmRole
+      InstanceProfileName: MySsmRoleInstanceProfile
+
+  ec2InterfaceEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcEndpointType: Interface
+      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.ec2'
+      VpcId: !ImportValue MyVpc
+      SubnetIds: 
+        - !ImportValue AppSubnetA
+        - !ImportValue AppSubnetB
+      SecurityGroupIds:
+        - !Ref mySecurityGroup
+      PrivateDnsEnabled: true
+
+  ec2MessagesInterfaceEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcEndpointType: Interface
+      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.ec2messages'
+      VpcId: !ImportValue MyVpc
+      SubnetIds: 
+        - !ImportValue AppSubnetA
+        - !ImportValue AppSubnetB
+      SecurityGroupIds:
+        - !Ref mySecurityGroup
+      PrivateDnsEnabled: true
+
+  ssmInterfaceEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcEndpointType: Interface
+      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.ssm'
+      VpcId: !ImportValue MyVpc
+      SubnetIds: 
+        - !ImportValue AppSubnetA
+        - !ImportValue AppSubnetB
+      SecurityGroupIds:
+        - !Ref mySecurityGroup
+      PrivateDnsEnabled: true
+
+  ssmMessagesInterfaceEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcEndpointType: Interface
+      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.ssmmessages'
+      VpcId: !ImportValue MyVpc
+      SubnetIds: 
+        - !ImportValue AppSubnetA
+        - !ImportValue AppSubnetB
+      SecurityGroupIds:
+        - !Ref mySecurityGroup
+      PrivateDnsEnabled: true
+
+  S3GatewayEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.s3'
+      VpcEndpointType: Gateway
+      VpcId: !ImportValue MyVpc
+      RouteTableIds:
+        - !ImportValue PrivateARouteTable
+        - !ImportValue PrivateBRouteTable
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal: '*'
+            Action: '*'
+            Resource: '*'
