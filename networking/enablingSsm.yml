@@ -8,9 +8,31 @@ Parameters:
   SSMManagedInstanceCoreArn:
     Type: String
     Default: arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
-  mySecurityGroup:
+  myDefaultSecurityGroup:
     Type: String
     Default: sg-09809e225a146acec
+  clientVpc:
+    Type: String 
+    Default: ''
+  clientSubnetA:
+    Type: String
+    Default: ''
+  clientSubnetB:
+    Type: String
+    Default: ''
+  clientRouteTableA:
+    Type: String
+    Default: ''
+  clientRouteTableB:
+    Type: String
+    Default: ''
+
+Conditions:
+  clientVpcExists: !Not [ !Equals [!Ref clientVpc, '']]
+  clientSubnetAExists: !Not [ !Equals [!Ref clientSubnetA, '']]
+  clientSubnetBExists: !Not [ !Equals [!Ref clientSubnetB, '']]
+  clientRouteTableAExists: !Not [ !Equals [!Ref clientRouteTableA, '']]
+  clientRouteTableBExists: !Not [ !Equals [!Ref clientRouteTableB, '']]
     
 Resources:
   MySsmRole:
@@ -47,12 +69,12 @@ Resources:
     Properties:
       VpcEndpointType: Interface
       ServiceName: !Sub 'com.amazonaws.${AWS::Region}.ec2'
-      VpcId: !ImportValue MyVpc
+      VpcId: !If [clientVpcExists, !Ref clientVpc, !ImportValue MyVpc]
       SubnetIds: 
-        - !ImportValue AppSubnetA
-        - !ImportValue AppSubnetB
+        - !If [clientSubnetAExists, !Ref clientSubnetA, !ImportValue AppSubnetA]
+        - !If [clientSubnetBExists, !Ref clientSubnetB, !ImportValue AppSubnetB]
       SecurityGroupIds:
-        - !Ref mySecurityGroup
+        - !Ref myDefaultSecurityGroup
       PrivateDnsEnabled: true
 
   ec2MessagesInterfaceEndpoint:
@@ -60,12 +82,12 @@ Resources:
     Properties:
       VpcEndpointType: Interface
       ServiceName: !Sub 'com.amazonaws.${AWS::Region}.ec2messages'
-      VpcId: !ImportValue MyVpc
+      VpcId: !If [clientVpcExists, !Ref clientVpc, !ImportValue MyVpc]
       SubnetIds: 
-        - !ImportValue AppSubnetA
-        - !ImportValue AppSubnetB
+        - !If [clientSubnetAExists, !Ref clientSubnetA, !ImportValue AppSubnetA]
+        - !If [clientSubnetBExists, !Ref clientSubnetB, !ImportValue AppSubnetB]
       SecurityGroupIds:
-        - !Ref mySecurityGroup
+        - !Ref myDefaultSecurityGroup
       PrivateDnsEnabled: true
 
   ssmInterfaceEndpoint:
@@ -73,12 +95,12 @@ Resources:
     Properties:
       VpcEndpointType: Interface
       ServiceName: !Sub 'com.amazonaws.${AWS::Region}.ssm'
-      VpcId: !ImportValue MyVpc
+      VpcId: !If [clientVpcExists, !Ref clientVpc, !ImportValue MyVpc]
       SubnetIds: 
-        - !ImportValue AppSubnetA
-        - !ImportValue AppSubnetB
+        - !If [clientSubnetAExists, !Ref clientSubnetA, !ImportValue AppSubnetA]
+        - !If [clientSubnetBExists, !Ref clientSubnetB, !ImportValue AppSubnetB]
       SecurityGroupIds:
-        - !Ref mySecurityGroup
+        - !Ref myDefaultSecurityGroup
       PrivateDnsEnabled: true
 
   ssmMessagesInterfaceEndpoint:
@@ -86,12 +108,12 @@ Resources:
     Properties:
       VpcEndpointType: Interface
       ServiceName: !Sub 'com.amazonaws.${AWS::Region}.ssmmessages'
-      VpcId: !ImportValue MyVpc
+      VpcId: !If [clientVpcExists, !Ref clientVpc, !ImportValue MyVpc]
       SubnetIds: 
-        - !ImportValue AppSubnetA
-        - !ImportValue AppSubnetB
+        - !If [clientSubnetAExists, !Ref clientSubnetA, !ImportValue AppSubnetA]
+        - !If [clientSubnetBExists, !Ref clientSubnetB, !ImportValue AppSubnetB]
       SecurityGroupIds:
-        - !Ref mySecurityGroup
+        - !Ref myDefaultSecurityGroup
       PrivateDnsEnabled: true
 
   S3GatewayEndpoint:
@@ -99,10 +121,10 @@ Resources:
     Properties:
       ServiceName: !Sub 'com.amazonaws.${AWS::Region}.s3'
       VpcEndpointType: Gateway
-      VpcId: !ImportValue MyVpc
+      VpcId: !If [clientVpcExists, !Ref clientVpc, !ImportValue MyVpc]
       RouteTableIds:
-        - !ImportValue PrivateARouteTable
-        - !ImportValue PrivateBRouteTable
+        - !If [clientRouteTableAExists, !Ref clientRouteTableA, !ImportValue PrivateARouteTable]
+        - !If [clientRouteTableBExists, !Ref clientRouteTableB, !ImportValue PrivateBRouteTable]
       PolicyDocument:
         Version: 2012-10-17
         Statement:
