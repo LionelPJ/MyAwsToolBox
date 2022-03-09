@@ -2,12 +2,6 @@
 AWSTemplateFormatVersion: 2010-09-09
 Description: Building a three tier network
 Parameters:
-  LatestAmiId:
-    Type: 'AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>'
-    Default: '/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2'
-  # EC2RoleForSSMArn:
-  #   Type: String
-  #   Default: 'arn:aws:iam::aws:policy/service-role/AmazonEC2RoleforSSM'
   CWAgentServerPolicyArn:
     Type: String
     Default: 'arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy'
@@ -24,7 +18,6 @@ Resources:
     Properties:
       Description: Role that allows SSM capability
       ManagedPolicyArns:
-        # - !Ref EC2RoleForSSMArn
         - !Ref CWAgentServerPolicyArn
         - !Ref SSMManagedInstanceCoreArn
       AssumeRolePolicyDocument:
@@ -34,7 +27,6 @@ Resources:
             Principal:
               Service:
                 - ec2.amazonaws.com
-                - ssm.amazonaws.com
             Action:
               - 'sts:AssumeRole'
       Path: /
